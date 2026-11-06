@@ -253,7 +253,7 @@ public class FootballManager implements CommandLineRunner {
         };
         player(playerNumber).setStatus(playerStatus);
         if (playerStatus == PlayerStatus.NOT_IN_SQUAD && myTeam > 0) {
-            team(myTeam).removePlayer(player(playerNumber));
+            boolean result = team(myTeam).removePlayer(player(playerNumber));
         }
     }
 

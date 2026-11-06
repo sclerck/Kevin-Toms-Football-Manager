@@ -2,6 +2,9 @@ package org.sclerck.ktfm.model;
 
 import java.util.Objects;
 
+import static org.sclerck.ktfm.Utils.requireLabel;
+import static org.sclerck.ktfm.Utils.requireRange;
+
 public final class Player {
     private final int squadNumber;
     private String name;
@@ -14,7 +17,7 @@ public final class Player {
     public Player(int squadNumber, String name, PlayerStatus status, int skill, int energy, int marketValue) {
         this.squadNumber = squadNumber;
         this.position = PlayerPosition.fromSquadNumber(squadNumber);
-        this.name = requireName(name, "Player name");
+        this.name = requireLabel(name, "Player name");
         this.status = Objects.requireNonNull(status, "status");
         setSkill(skill);
         setEnergy(energy);
@@ -34,7 +37,7 @@ public final class Player {
     }
 
     public void setName(String name) {
-        this.name = requireName(name, "Player name");
+        this.name = requireLabel(name, "Player name");
     }
 
     public void setSkill(int skill) {
@@ -48,18 +51,5 @@ public final class Player {
     public void setMarketValue(int marketValue) {
         if (marketValue < 0) throw new IllegalArgumentException("Market value cannot be negative");
         this.marketValue = marketValue;
-    }
-
-    static String requireName(String value, String label) {
-        Objects.requireNonNull(value, label);
-        if (value.isBlank()) throw new IllegalArgumentException(label + " cannot be blank");
-        return value;
-    }
-
-    private static int requireRange(int value, int min, int max, String label) {
-        if (value < min || value > max) {
-            throw new IllegalArgumentException(label + " must be between " + min + " and " + max);
-        }
-        return value;
     }
 }

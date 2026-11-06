@@ -1,10 +1,10 @@
-﻿package org.sclerck.ktfm;
+package org.sclerck.ktfm;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest(properties = "ktfm.console.enabled=false")
-class KevinTomsFootballManagerApplicationTests {
+public class KevinTomsFootballManagerApplicationTests {
 
     @Test
     void contextLoads() {

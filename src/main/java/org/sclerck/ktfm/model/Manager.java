@@ -1,5 +1,7 @@
 package org.sclerck.ktfm.model;
 
+import org.sclerck.ktfm.Utils;
+
 import java.util.Objects;
 
 public final class Manager {
@@ -8,7 +10,7 @@ public final class Manager {
     private final int skillLevel;
 
     public Manager(String name, Team team, int skillLevel) {
-        this.name = Player.requireName(name, "Manager name");
+        this.name = Utils.requireLabel(name, "Manager name");
         this.team = Objects.requireNonNull(team, "team");
         if (skillLevel < 1 || skillLevel > 7) {
             throw new IllegalArgumentException("Skill level must be between 1 and 7");

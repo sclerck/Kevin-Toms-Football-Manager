@@ -1,5 +1,6 @@
 package org.sclerck.ktfm;
 
+import java.util.Objects;
 import java.util.Scanner;
 
 public class Utils {
@@ -44,5 +45,18 @@ public class Utils {
             try { return Integer.parseInt(s); }
             catch (NumberFormatException e) { System.out.println("Please enter a number."); }
         }
+    }
+
+    public static String requireLabel(String value, String label) {
+        Objects.requireNonNull(value, label);
+        if (value.isBlank()) throw new IllegalArgumentException(label + " cannot be blank");
+        return value;
+    }
+
+    public static int requireRange(int value, int min, int max, String label) {
+        if (value < min || value > max) {
+            throw new IllegalArgumentException(label + " must be between " + min + " and " + max);
+        }
+        return value;
     }
 }

@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import static org.sclerck.ktfm.Utils.requireLabel;
+
 public final class Team {
     public static final int MAX_SQUAD_SIZE = 16;
 
@@ -35,7 +37,7 @@ public final class Team {
     public int getLoan() { return loan; }
 
     public void setName(String name) {
-        this.name = Player.requireName(name, "Team name");
+        this.name = requireLabel(name, "Team name");
     }
 
     public void setDivision(int division) {
