@@ -9,20 +9,20 @@ import org.sclerck.ktfm.model.TeamColor;
 import static org.sclerck.ktfm.FootballManager.DIV_SIZE;
 import static org.sclerck.ktfm.FootballManager.MAX_PLAYERS;
 import static org.sclerck.ktfm.FootballManager.MAX_TEAMS;
-import static org.sclerck.ktfm.FootballManager.cls;
-import static org.sclerck.ktfm.FootballManager.inputInt;
-import static org.sclerck.ktfm.FootballManager.inputLine;
 import static org.sclerck.ktfm.FootballManager.levelName;
-import static org.sclerck.ktfm.FootballManager.pause;
 import static org.sclerck.ktfm.FootballManager.r;
+import static org.sclerck.ktfm.Utils.cls;
+import static org.sclerck.ktfm.Utils.inputInt;
+import static org.sclerck.ktfm.Utils.inputLine;
+import static org.sclerck.ktfm.Utils.pause;
 
 /** Initial game setup: manager name, club and player data, team choice, skill level, colours and squad. */
-final class Setup {
+final class GameEngine {
 
     /** Everything the game needs once setup is complete. Arrays are 1-based. */
     record Result(Player[] players, Team[] teams, Manager manager, int myTeam, int division) { }
 
-    private Setup() { }
+    private GameEngine() { }
 
     static Result run() {
         showTitle();
@@ -39,7 +39,7 @@ final class Setup {
 
         int skillLevel = chooseSkillLevel();
         team.setColor(chooseColour());
-        team.setFinances(50000, 0);
+        Finance.openAccount(team);
         assignStartingSquad(players, team);
 
         System.out.println("You are now managing " + team.getName() + "!");
