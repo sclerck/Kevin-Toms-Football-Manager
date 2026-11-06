@@ -28,74 +28,66 @@ public class FootballManager {
     static final int MAX_PLAYERS = 24;
     static final int MAX_TEAMS   = 64;
     static final int DIV_SIZE    = 16;
-    static final int MAX_LOAN    = 250000;
+    private static final int MAX_LOAN    = 250000;
 
     // ─── Random ──────────────────────────────────────────────────────────────
-    static final Random RND = new Random();
+    private static final Random RND = new Random();
     /** Equivalent to FN r(x) = INT(RND*x+1) */
     static int r(int x) { return RND.nextInt(x) + 1; }
 
     // ─── Player data ─────────────────────────────────────────────────────────
-    static Player[] players = new Player[MAX_PLAYERS + 1]; // 1-based
+    private static Player[] players = new Player[MAX_PLAYERS + 1]; // 1-based
 
     // ─── Team data ───────────────────────────────────────────────────────────
-    static Team[] teams = new Team[MAX_TEAMS + 1]; // 1-based
+    private static Team[] teams = new Team[MAX_TEAMS + 1]; // 1-based
 
     // ─── League season ────────────────────────────────────────────────────
-    static League currentLeague;
+    private static League currentLeague;
 
     // ─── Generated opposition attributes for the current match ────────────
-    static TeamAttributes oppositionAttributes = new TeamAttributes(1, 1, 1, 1, 1);
+    private static TeamAttributes oppositionAttributes = new TeamAttributes(1, 1, 1, 1, 1);
 
     // ─── Match state ─────────────────────────────────────────────────────────
-    static int score1, score2;            // home, away scores
-    static int matchTeam1, matchTeam2;    // team indices
+    private static int score1, score2;            // home, away scores
+    private static int matchTeam1, matchTeam2;    // team indices
 
     // ─── Season / game state ─────────────────────────────────────────────────
-    static String managerName;
-    static Manager manager;
-    static int myTeam;          // team index (1-based in teams[])
-    static int division;        // 1-4
-    static int divOffset;       // (division-1)*16
-    static int divMult;         // 5-division (money multiplier)
-    static int leagueMatch;     // current league match number
-    static int cupRound;        // 0 = not started, 1-8
-    static int matchCounter;    // cycles 1-2 before cup game
-    static int homeAway;        // h: was your team home(1) or away(2) last game
-    static int leagueGame;      // lc: 1=cup, 2=league
-    static int opp;             // opponent team index
-    static int groundRent;
-    static int skillLevel;      // 1-7
-    static int seasons;
-    static int totalScore;
-    static boolean inCup;       // still in FA cup this season
-    static String[] levelName   = {"", "Beginner", "Novice", "Average", "Good", "Expert", "Super Expert", "Genius"};
-    static String[] attrName    = {"", "Energy", "Morale", "Defence", "Midfield", "Attack"};
+    private static Manager manager;
+    private static int myTeam;          // team index (1-based in teams[])
+    private static int division;        // 1-4
+    private static int divOffset;       // (division-1)*16
+    private static int divMult;         // 5-division (money multiplier)
+    private static int leagueMatch;     // current league match number
+    private static int cupRound;        // 0 = not started, 1-8
+    private static int matchCounter;    // cycles 1-2 before cup game
+    private static int homeAway;        // h: was your team home(1) or away(2) last game
+    private static int leagueGame;      // lc: 1=cup, 2=league
+    private static int opp;             // opponent team index
+    private static int groundRent;
+    private static int skillLevel;      // 1-7
+    private static int seasons;
+    private static boolean inCup;       // still in FA cup this season
+    static final String[] levelName   = {"", "Beginner", "Novice", "Average", "Good", "Expert", "Super Expert", "Genius"};
+    private static final String[] attrName    = {"", "Energy", "Morale", "Defence", "Midfield", "Attack"};
 
     // ─── Completed match ──────────────────────────────────────────────────
-    static Match currentMatch;
+    private static Match currentMatch;
 
     // ─── Scanner ─────────────────────────────────────────────────────────────
-    static final Scanner SC = new Scanner(System.in);
+    private static final Scanner SC = new Scanner(System.in);
 
     // =========================================================================
     // ENTRY POINT
     // =========================================================================
     public static void play() {
-        cls();
-        System.out.println("╔══════════════════════════════════╗");
-        System.out.println("║       FOOTBALL MANAGER           ║");
-        System.out.println("║   © K. & J. Toms 1982            ║");
-        System.out.println("║   Java port - faithful remake    ║");
-        System.out.println("╚══════════════════════════════════╝");
-        System.out.println();
+        Setup.Result setup = Setup.run();
+        players = setup.players();
+        teams = setup.teams();
+        manager = setup.manager();
+        myTeam = setup.myTeam();
+        division = setup.division();
+        skillLevel = manager.getSkillLevel();
 
-        do {
-            managerName = inputLine("Type your name: ", 20);
-        } while (managerName.isBlank());
-
-        loadData();
-        chooseTeam();
         initSeason();
 
         mainLoop();
@@ -104,7 +96,7 @@ public class FootballManager {
     // =========================================================================
     // MAIN LOOP
     // =========================================================================
-    static void mainLoop() {
+    private static void mainLoop() {
         while (true) {
             managementMenu();
             setupMatch();
@@ -117,7 +109,7 @@ public class FootballManager {
     // =========================================================================
     // MANAGEMENT MENU  (subroutine 2000)
     // =========================================================================
-    static void managementMenu() {
+    private static void managementMenu() {
         while (true) {
             cls();
             System.out.println("══════════════════════════════════");
@@ -148,7 +140,7 @@ public class FootballManager {
     }
 
     // ─── Sell or list players (subroutine 2400) ───────────────────────────
-    static void sellOrListPlayers() {
+    private static void sellOrListPlayers() {
         while (true) {
             cls();
             printSquadHeader();
@@ -187,7 +179,7 @@ public class FootballManager {
     }
 
     // ─── Print stats (subroutine 3000) ────────────────────────────────────
-    static void printStats() {
+    private static void printStats() {
         cls();
         System.out.println("Team    : " + team(myTeam).getName());
         System.out.println("Manager : " + manager.getName());
@@ -202,7 +194,7 @@ public class FootballManager {
     }
 
     // ─── Loan (subroutine 2800) ────────────────────────────────────────────
-    static void obtainLoan() {
+    private static void obtainLoan() {
         cls();
         printMoney();
         int amount = inputInt("How much do you want to borrow? £");
@@ -222,7 +214,7 @@ public class FootballManager {
     }
 
     // ─── Pay off loan (subroutine 2900) ───────────────────────────────────
-    static void payOffLoan() {
+    private static void payOffLoan() {
         cls();
         printMoney();
         int amount = inputInt("How much do you want to repay? £");
@@ -236,7 +228,7 @@ public class FootballManager {
     }
 
     // ─── Change level (subroutine 3200) ───────────────────────────────────
-    static void changeLevel() {
+    private static void changeLevel() {
         cls();
         System.out.println("Current level: " + skillLevel + " - " + levelName[skillLevel]);
         System.out.println("Choose a level:");
@@ -244,13 +236,13 @@ public class FootballManager {
         int n = inputInt("Enter level (1-7): ");
         if (n < 1 || n > 7) { System.out.println("1 to 7 please!"); pause(1000); return; }
         skillLevel = n;
-        manager = new Manager(managerName, team(myTeam), skillLevel);
+        manager = new Manager(manager.getName(), team(myTeam), skillLevel);
         System.out.println("New skill level: " + skillLevel + " - " + levelName[skillLevel]);
         waitEnter();
     }
 
     // ─── Save game (subroutine 800) ───────────────────────────────────────
-    static void saveGame() {
+    private static void saveGame() {
         System.out.println("(Save not implemented in this port - your game state is held in memory.)");
         String ans = inputLine("Do you want to play more? (y/n): ", 0).toUpperCase();
         if (!ans.equals("Y") && !ans.equals("YES")) {
@@ -262,7 +254,7 @@ public class FootballManager {
     // =========================================================================
     // MATCH SETUP  (subroutine 4000 / 4100)
     // =========================================================================
-    static void setupMatch() {
+    private static void setupMatch() {
         matchCounter++;
         leagueGame = 2; // default: league
         if (matchCounter == 3) { matchCounter = 0; leagueGame = 1; }
@@ -341,13 +333,13 @@ public class FootballManager {
         if (leagueGame == 2) { printOtherResults(); printLeagueTable(); }
     }
 
-    static String cupRoundName() {
+    private static String cupRoundName() {
         if (cupRound < 7) return String.valueOf(cupRound);
         if (cupRound == 7) return "Semi-Final";
         return "Final";
     }
 
-    static int matchPrize() {
+    private static int matchPrize() {
         if (leagueGame == 1) {
             if (cupRound == 7) return 50000;
             if (cupRound == 8) return 100000;
@@ -361,7 +353,7 @@ public class FootballManager {
     }
 
     // ─── Build opposition attributes (line 4150/4152) ─────────────────────
-    static void buildOppositionAttributes() {
+    private static void buildOppositionAttributes() {
         int[] attributes = new int[6];
         for (int i = 1; i <= 5; i++) {
             int val;
@@ -379,7 +371,7 @@ public class FootballManager {
     }
 
     // ─── Compute your team attributes from squad (subroutine 6500) ────────
-    static void computeTeamAttributes() {
+    private static void computeTeamAttributes() {
         int[] attributes = new int[6];
 
         for (int i = 1; i <= MAX_PLAYERS; i++) {
@@ -403,7 +395,7 @@ public class FootballManager {
     }
 
     // ─── Print attribute comparison ────────────────────────────────────────
-    static void printAttributeComparison() {
+    private static void printAttributeComparison() {
         System.out.printf("%-15s %5s %5s%n", "Attribute", team(myTeam).getName().substring(0, Math.min(5, team(myTeam).getName().length())), team(opp).getName().substring(0, Math.min(5, team(opp).getName().length())));
         for (int i = 1; i <= 5; i++) {
             System.out.printf("%-15s %5d %5d%n", attrName[i], teamAttribute(i), oppositionAttribute(i));
@@ -413,7 +405,7 @@ public class FootballManager {
     // =========================================================================
     // SQUAD SELECTION  (subroutine 6000)
     // =========================================================================
-    static void selectSquad() {
+    private static void selectSquad() {
         // Update energy and injury recovery
         for (int i = 1; i <= MAX_PLAYERS; i++) {
             if (statusCode(i) == 0) continue;
@@ -467,14 +459,14 @@ public class FootballManager {
         }
     }
 
-    static int countPicked() {
+    private static int countPicked() {
         return team(myTeam).getStartingPlayers().size();
     }
 
     // =========================================================================
     // MATCH SIMULATION  (subroutine 5000)
     // =========================================================================
-    static void playMatch() {
+    private static void playMatch() {
         score1 = 0; score2 = 0;
         cls();
         System.out.println("★★  MATCH HIGHLIGHTS  ★★");
@@ -513,7 +505,7 @@ public class FootballManager {
         System.out.println("──────────────────────────────────");
     }
 
-    static void simulateAttack(boolean myHome, boolean myTeamAttacking) {
+    private static void simulateAttack(boolean myHome, boolean myTeamAttacking) {
         boolean isGoal = r(3) == 1; // simplified probability
         String attacker = randomPlayerName(myTeamAttacking);
 
@@ -526,7 +518,7 @@ public class FootballManager {
         }
     }
 
-    static String randomPlayerName(boolean myTeam) {
+    private static String randomPlayerName(boolean myTeam) {
         if (myTeam) {
             for (int tries = 0; tries < 50; tries++) {
                 int i = r(MAX_PLAYERS);
@@ -539,12 +531,12 @@ public class FootballManager {
     // =========================================================================
     // LEAGUE UPDATES  (subroutine 7000)
     // =========================================================================
-    static void updateLeague() {
+    private static void updateLeague() {
         currentLeague.recordResult(currentMatch);
     }
 
     // ─── Print other results (subroutine 7500) ────────────────────────────
-    static void printOtherResults() {
+    private static void printOtherResults() {
         cls();
         System.out.println("OTHER RESULTS - Division " + division);
         System.out.println("──────────────────────────────────");
@@ -567,7 +559,7 @@ public class FootballManager {
     }
 
     // ─── Print league table (subroutine 7710 / 7805) ─────────────────────
-    static void printLeagueTable() {
+    private static void printLeagueTable() {
         List<LeagueStanding> table = currentLeague.getTable();
         cls();
         System.out.println("══════════════════════════════════════════════════");
@@ -588,7 +580,7 @@ public class FootballManager {
     // =========================================================================
     // CUP UPDATES  (subroutine 5200)
     // =========================================================================
-    static void updateCup() {
+    private static void updateCup() {
         boolean myHome = (matchTeam1 == myTeam);
         int mySc  = myHome ? score1 : score2;
         int oppSc = myHome ? score2 : score1;
@@ -619,7 +611,7 @@ public class FootballManager {
     // =========================================================================
     // WAGES AND FINANCES  (subroutine 8000)
     // =========================================================================
-    static void payWages() {
+    private static void payWages() {
         cls();
         int wages = 0;
         for (int i = 1; i <= MAX_PLAYERS; i++) {
@@ -654,7 +646,7 @@ public class FootballManager {
     // =========================================================================
     // END OF SEASON  (subroutine 8100)
     // =========================================================================
-    static void endOfSeasonCheck() {
+    private static void endOfSeasonCheck() {
         if (leagueMatch < 15 || inCup) return;  // simplified trigger
 
         cls();
@@ -663,7 +655,6 @@ public class FootballManager {
         // Bonus for performance
         int pos = currentLeague.getTable().indexOf(standing(myTeam - divOffset)) + 1;
         int bonus = (17 - pos) * 5000 * divMult + cupRound * 2;
-        totalScore += bonus + pos;
         adjustFinances((17 - pos) * 5000 * divMult, 0);
         System.out.println("Season bonus: £" + ((17 - pos) * 5000 * divMult));
 
@@ -690,7 +681,7 @@ public class FootballManager {
     }
 
     // ─── Reset season variables (subroutine 8800) ─────────────────────────
-    static void initSeason() {
+    private static void initSeason() {
         divOffset = (division - 1) * DIV_SIZE;
         divMult   = 5 - division;
         currentLeague = new League(division);
@@ -720,7 +711,7 @@ public class FootballManager {
     // =========================================================================
     // TRANSFER MARKET  (subroutine 8700)
     // =========================================================================
-    static void transferMarket() {
+    private static void transferMarket() {
         if (leagueMatch == 0) return;
 
         // Find an available player (one not in squad)
@@ -770,13 +761,13 @@ public class FootballManager {
     // =========================================================================
     // SQUAD DISPLAY HELPERS
     // =========================================================================
-    static void printSquadHeader() {
+    private static void printSquadHeader() {
         System.out.printf("  %-12s %3s %6s %7s %8s %7s%n",
                 "NAME", "NO.", "SKILL", "ENERGY", "VALUE", "STATUS");
         System.out.println("  " + "─".repeat(52));
     }
 
-    static void printSquad(boolean showStatus) {
+    private static void printSquad(boolean showStatus) {
         for (int i = 1; i <= MAX_PLAYERS; i++) {
             if (statusCode(i) == 0) continue;
             String positionLabel = switch (player(i).getPosition()) {
@@ -798,19 +789,19 @@ public class FootballManager {
     }
 
     // ─── Print money (subroutine 1000) ────────────────────────────────────
-    static void printMoney() {
+    private static void printMoney() {
         System.out.println("  Money: £" + balance() + "   Loan: £" + debt());
     }
 
     // ─── Clamp morale 1..20 (subroutine 1040) ─────────────────────────────
-    static void clampMorale() {
+    private static void clampMorale() {
         setTeamAttribute(2, Math.clamp(teamAttribute(2), 1, 20));
     }
 
     // =========================================================================
     // CHANGE NAMES  (subroutines 9400 / 9500)
     // =========================================================================
-    static void changeTeamNames() {
+    private static void changeTeamNames() {
         String ans = inputLine("Change team names? (y/n): ", 0).toUpperCase();
         if (!ans.equals("Y") && !ans.equals("YES")) return;
         while (true) {
@@ -823,7 +814,7 @@ public class FootballManager {
         }
     }
 
-    static void changePlayerNames() {
+    private static void changePlayerNames() {
         String ans = inputLine("Change player names? (y/n): ", 0).toUpperCase();
         if (!ans.equals("Y") && !ans.equals("YES")) return;
         while (true) {
@@ -833,111 +824,6 @@ public class FootballManager {
             System.out.println("Current name: " + player(n).getName());
             String name = inputLine("New name (max 8 chars): ", 8);
             if (!name.isEmpty()) player(n).setName(name);
-        }
-    }
-
-    // =========================================================================
-    // CHOOSE TEAM  (subroutine 8900)
-    // =========================================================================
-    static void chooseTeam() {
-        while (true) {
-            cls();
-            int d = 0;
-            while (d < 1 || d > 4) {
-                System.out.println("Choose a division to browse (1-4): ");
-                for (int div = 1; div <= 4; div++) {
-                    System.out.println("  Division " + div + ":");
-                    int off = (div - 1) * 16;
-                    for (int i = off + 1; i <= off + 16; i++)
-                        System.out.printf("    %2d. %s%n", i, team(i).getName());
-                }
-                d = inputInt("Division: ");
-            }
-            int offset = (d - 1) * 16;
-            int t = 0;
-            while (t < offset + 1 || t > offset + 16) {
-                t = inputInt("Type team number (or 99 for another division): ");
-                if (t == 99) break;
-            }
-            if (t == 99) continue;
-
-            myTeam   = t;
-            division = d;
-            break;
-        }
-
-        // Skill level
-        cls();
-        System.out.println("Choose your skill level:");
-        for (int i = 1; i <= 7; i++) System.out.println("  " + i + " - " + levelName[i]);
-        skillLevel = 0;
-        while (skillLevel < 1 || skillLevel > 7)
-            skillLevel = inputInt("Level (1-7): ");
-
-        // Colours
-        int colorChoice = -1;
-        while (colorChoice != 0 && colorChoice != 7) {
-            colorChoice = inputInt("Team colours - 0=Black or 7=White: ");
-        }
-        team(myTeam).setColor(colorChoice == 0 ? TeamColor.BLACK : TeamColor.WHITE);
-        team(myTeam).setFinances(50000, 0);
-        manager = new Manager(managerName, team(myTeam), skillLevel);
-
-        // Assign random starting squad (12 players from the 24)
-        int picked = 0;
-        while (picked < 12) {
-            int i = r(MAX_PLAYERS);
-            if (statusCode(i) == 0) {
-                setPlayerStatus(i, (picked == 11) ? 1 : 2); // last one on bench
-                team(myTeam).addPlayer(player(i));
-                picked++;
-            }
-        }
-
-        System.out.println("You are now managing " + team(myTeam).getName() + "!");
-        pause(1500);
-    }
-
-    // =========================================================================
-    // DATA LOADING  (subroutine 9000)
-    // =========================================================================
-    static void loadData() {
-        // Player names (line 9030)
-        String[] names = {
-                "P.Parkes","D.Watson","P.Neal","A.Martin","K.Sansom","M.Mills",
-                "R.Osman","S.Foster","B.Robson","G.Hoddle","G.Rix","S.Hunt",
-                "G.Owen","R.Moses","B.Talbot","S.McCall","C.Regis","P.Withe",
-                "T.Morley","P.Barnes","E.Gates","K.Reeves","K.Keegan","G.Shaw"
-        };
-        // Team names - all 4 divisions (line 9230)
-        String[] teamNames = {
-                // Division 1
-                "Arsenal","Aston V.","Brighton","Coventry","Everton","Ipswich",
-                "Liverpool","Luton","Man.City","Man.Utd","Norwich","Notts.F.",
-                "Swansea","Spurs","Watford","West Ham",
-                // Division 2
-                "Blackburn","Bolton","Cambridge","Charlton","Chelsea","Crystal P.",
-                "Derby Co.","Fulham","Grimsby","Leeds","Middlesbro","Newcastle",
-                "Oldham","Q.P.R.","Rotherham","Sheff.Wed",
-                // Division 3
-                "Bradford","Brentford","Bristol R.","Cardiff","Doncaster","Exeter",
-                "Lincoln","Millwall","Newport","Orient","Oxford","Plymouth",
-                "Preston","Reading","Southend","Walsall",
-                // Division 4
-                "Blackpool","Bury","Colchester","Crewe","Darlington","Halifax",
-                "Hartlepool","Hereford","Hull","Mansfield","Port Vale","Rochdale",
-                "Scunthorpe","Stockport","Torquay","York City"
-        };
-        // Create the domain objects for all clubs and players.
-        for (int i = 1; i <= MAX_TEAMS; i++) {
-            teams[i] = new Team(teamNames[i - 1], (i - 1) / DIV_SIZE + 1);
-        }
-
-        // Random initial player skills / energies
-        for (int i = 1; i <= MAX_PLAYERS; i++) {
-            int skill = r(10);
-            players[i] = new Player(i, names[i - 1], PlayerStatus.NOT_IN_SQUAD,
-                    skill, r(20), skill * 5000);
         }
     }
 
@@ -954,7 +840,7 @@ public class FootballManager {
         try { Thread.sleep(ms); } catch (InterruptedException ignored) {}
     }
 
-    static void waitEnter() {
+    private static void waitEnter() {
         System.out.print("  [Press ENTER to continue]");
         SC.nextLine();
     }
@@ -980,19 +866,19 @@ public class FootballManager {
         }
     }
 
-    static String randomTeamName() {
+    private static String randomTeamName() {
         return team(r(MAX_TEAMS)).getName();
     }
 
-    static Player player(int number) {
+    private static Player player(int number) {
         return players[number];
     }
 
-    static Team team(int number) {
+    private static Team team(int number) {
         return teams[number];
     }
 
-    static int statusCode(int playerNumber) {
+    private static int statusCode(int playerNumber) {
         return switch (player(playerNumber).getStatus()) {
             case NOT_IN_SQUAD -> 0;
             case SQUAD -> 1;
@@ -1001,7 +887,7 @@ public class FootballManager {
         };
     }
 
-    static void setPlayerStatus(int playerNumber, int status) {
+    private static void setPlayerStatus(int playerNumber, int status) {
         PlayerStatus playerStatus = switch (status) {
             case 0 -> PlayerStatus.NOT_IN_SQUAD;
             case 1 -> PlayerStatus.SQUAD;
@@ -1015,7 +901,7 @@ public class FootballManager {
         }
     }
 
-    static int teamAttribute(int attribute) {
+    private static int teamAttribute(int attribute) {
         TeamAttributes attributes = team(myTeam).getAttributes();
         return switch (attribute) {
             case 1 -> attributes.energy();
@@ -1027,7 +913,7 @@ public class FootballManager {
         };
     }
 
-    static void setTeamAttribute(int attribute, int value) {
+    private static void setTeamAttribute(int attribute, int value) {
         if (attribute < 1 || attribute > 5) {
             throw new IllegalArgumentException("Unknown team attribute: " + attribute);
         }
@@ -1041,7 +927,7 @@ public class FootballManager {
         team(myTeam).setAttributes(new TeamAttributes(energy, morale, defence, midfield, attack));
     }
 
-    static int oppositionAttribute(int attribute) {
+    private static int oppositionAttribute(int attribute) {
         return switch (attribute) {
             case 1 -> oppositionAttributes.energy();
             case 2 -> oppositionAttributes.morale();
@@ -1052,23 +938,23 @@ public class FootballManager {
         };
     }
 
-    static LeagueStanding standing(int localTeamNumber) {
+    private static LeagueStanding standing(int localTeamNumber) {
         return currentLeague.getStanding(team(divOffset + localTeamNumber));
     }
 
-    static int balance() {
+    private static int balance() {
         return team(myTeam).getBalance();
     }
 
-    static int debt() {
+    private static int debt() {
         return team(myTeam).getLoan();
     }
 
-    static void adjustFinances(int balanceChange, int debtChange) {
+    private static void adjustFinances(int balanceChange, int debtChange) {
         team(myTeam).setFinances(balance() + balanceChange, debt() + debtChange);
     }
 
-    static void moveManagedTeamToDivision() {
+    private static void moveManagedTeamToDivision() {
         Team managedTeam = team(myTeam);
         int previousDivision = managedTeam.getDivision();
         int newIndex = (division - 1) * DIV_SIZE + DIV_SIZE;
