@@ -1,6 +1,24 @@
 # Kevin-Toms-Football-Manager
 A Java rewrite of the BASIC version posted by https://github.com/philspil66
 
+## Running
+
+This is a Spring Boot application (Java 25). The interactive console game starts
+via a `CommandLineRunner` once the context is ready:
+
+```
+mvn spring-boot:run
+```
+
+or build and run the executable jar:
+
+```
+mvn package
+java -jar target/ktfm-0.0.1.jar
+```
+
+Set `ktfm.console.enabled=false` to start the context without launching the game.
+
 ## Domain model
 
 `FootballManager` uses the typed domain objects in `org.sclerck.ktfm.model` for

@@ -12,7 +12,6 @@ import org.sclerck.ktfm.model.LeagueStanding;
 import org.sclerck.ktfm.model.Manager;
 import org.sclerck.ktfm.model.Match;
 import org.sclerck.ktfm.model.Player;
-import org.sclerck.ktfm.model.PlayerPosition;
 import org.sclerck.ktfm.model.PlayerStatus;
 import org.sclerck.ktfm.model.Team;
 import org.sclerck.ktfm.model.TeamAttributes;
@@ -82,7 +81,7 @@ public class FootballManager {
     // =========================================================================
     // ENTRY POINT
     // =========================================================================
-    public static void main(String[] args) {
+    public static void play() {
         cls();
         System.out.println("╔══════════════════════════════════╗");
         System.out.println("║       FOOTBALL MANAGER           ║");
