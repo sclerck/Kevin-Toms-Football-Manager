@@ -7,7 +7,6 @@ import static org.sclerck.ktfm.Finance.balance;
 import static org.sclerck.ktfm.Finance.printMoney;
 import static org.sclerck.ktfm.FootballManager.MAX_PLAYERS;
 
-import static org.sclerck.ktfm.FootballManager.MAX_TEAMS;
 import static org.sclerck.ktfm.FootballManager.divMult;
 import static org.sclerck.ktfm.FootballManager.myTeam;
 import static org.sclerck.ktfm.FootballManager.player;
@@ -16,7 +15,7 @@ import static org.sclerck.ktfm.FootballManager.printSquadHeader;
 import static org.sclerck.ktfm.FootballManager.r;
 import static org.sclerck.ktfm.FootballManager.setPlayerStatus;
 import static org.sclerck.ktfm.FootballManager.statusCode;
-import static org.sclerck.ktfm.FootballManager.team;
+import static org.sclerck.ktfm.FootballManager.randomTeam;
 import static org.sclerck.ktfm.Utils.cls;
 import static org.sclerck.ktfm.Utils.inputInt;
 import static org.sclerck.ktfm.Utils.inputLine;
@@ -29,7 +28,7 @@ final class TransferMarket {
     private TransferMarket() { }
 
     // ─── Sell or list players (subroutine 2400) ───────────────────────────
-    static void sellOrListPlayers(int myTeam) {
+    static void sellOrListPlayers() {
         while (true) {
             cls();
             printSquadHeader();
@@ -40,7 +39,7 @@ final class TransferMarket {
             if (n == 99) return;
             if (n < 1 || n > MAX_PLAYERS) continue;
             if (statusCode(n) == 0) { System.out.println("No such player."); pause(1000); continue; }
-            if (team(myTeam).getPlayers().size() <= Match.PLAYERS_PER_TEAM) {
+            if (myTeam.getPlayers().size() <= Match.PLAYERS_PER_TEAM) {
                 System.out.println("You must keep at least 11 players in your squad.");
                 pause(1000); continue;
             }
@@ -68,7 +67,7 @@ final class TransferMarket {
     }
 
     private static String randomTeamName() {
-        return team(r(MAX_TEAMS)).getName();
+        return randomTeam().getName();
     }
 
     // ─── Buy a player (subroutine 8700) ───────────────────────────────────
@@ -83,7 +82,7 @@ final class TransferMarket {
         }
         if (candidate == -1) return;
 
-        int squadSize = team(myTeam).getPlayers().size();
+        int squadSize = myTeam.getPlayers().size();
         if (squadSize >= 16) {
             System.out.println("Squad full (16 max) - cannot sign new player.");
             waitEnter(); return;
@@ -109,7 +108,7 @@ final class TransferMarket {
         if (ratio >= 5) {
             setPlayerStatus(candidate, 1);
             player(candidate).setMarketValue(player(candidate).getSkill() * 5000 * divMult);
-            team(myTeam).addPlayer(player(candidate));
+            myTeam.addPlayer(player(candidate));
             adjustFinances(-bid, 0);
             System.out.println(player(candidate).getName() + " has joined your team!");
         } else {

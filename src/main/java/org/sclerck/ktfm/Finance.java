@@ -3,11 +3,11 @@ package org.sclerck.ktfm;
 import org.sclerck.ktfm.model.Team;
 
 import static org.sclerck.ktfm.FootballManager.MAX_PLAYERS;
+import static org.sclerck.ktfm.FootballManager.currentLeague;
 import static org.sclerck.ktfm.FootballManager.divMult;
 import static org.sclerck.ktfm.FootballManager.myTeam;
 import static org.sclerck.ktfm.FootballManager.player;
 import static org.sclerck.ktfm.FootballManager.statusCode;
-import static org.sclerck.ktfm.FootballManager.team;
 import static org.sclerck.ktfm.Utils.cls;
 import static org.sclerck.ktfm.Utils.inputInt;
 import static org.sclerck.ktfm.Utils.pause;
@@ -24,15 +24,15 @@ final class Finance {
 
     // ─── Balance and debt of the managed team ─────────────────────────────
     static int balance() {
-        return team(myTeam).getBalance();
+        return myTeam.getBalance();
     }
 
     static int debt() {
-        return team(myTeam).getLoan();
+        return myTeam.getLoan();
     }
 
     static void adjustFinances(int balanceChange, int debtChange) {
-        team(myTeam).setFinances(balance() + balanceChange, debt() + debtChange);
+        myTeam.setFinances(balance() + balanceChange, debt() + debtChange);
     }
 
     // ─── Print money (subroutine 1000) ────────────────────────────────────
@@ -48,7 +48,7 @@ final class Finance {
     /** Resets season finances; a bankrupt club is re-funded for its division. */
     static void startSeason() {
         groundRent = 500 * divMult;
-        if (balance() == 0) team(myTeam).setFinances(STARTING_BALANCE * divMult, debt());
+        if (balance() == 0) myTeam.setFinances(STARTING_BALANCE * divMult, debt());
     }
 
     // ─── Loans ────────────────────────────────────────────────────────────
@@ -123,7 +123,7 @@ final class Finance {
             balance = 0;
             System.out.println("  ⚠ Shortfall added to loan!");
         }
-        team(myTeam).setFinances(balance, debt);
+        myTeam.setFinances(balance, debt);
         if (isDebtLimitExceeded(debt(), divMult)) {
             System.out.println("  ❌ DEBT EXCEEDED LIMIT - GAME OVER");
             waitEnter();
@@ -133,7 +133,7 @@ final class Finance {
     }
 
     static int seasonBonus(int leaguePosition) {
-        return (17 - leaguePosition) * 5000 * divMult;
+        return (currentLeague.getTeams().size() + 1 - leaguePosition) * 5000 * divMult;
     }
 
     static void awardSeasonBonus(int leaguePosition) {

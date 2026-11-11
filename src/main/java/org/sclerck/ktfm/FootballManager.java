@@ -1,6 +1,9 @@
 package org.sclerck.ktfm;
 
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import org.sclerck.ktfm.model.League;
 import org.sclerck.ktfm.model.LeagueStanding;
@@ -29,8 +32,6 @@ public class FootballManager implements CommandLineRunner {
 
     // ─── Constants ───────────────────────────────────────────────────────────
     static final int MAX_PLAYERS = 24;
-    static final int MAX_TEAMS   = 64;
-    static final int DIV_SIZE    = 16;
 
     // ─── Random ──────────────────────────────────────────────────────────────
     static final Random RND = new Random();
@@ -41,16 +42,15 @@ public class FootballManager implements CommandLineRunner {
     private static Player[] players = new Player[MAX_PLAYERS + 1]; // 1-based
 
     // ─── Team data ───────────────────────────────────────────────────────────
-    static Team[] teams = new Team[MAX_TEAMS + 1]; // 1-based
+    static Map<Integer, List<Team>> teams = Map.of(); // division ID -> teams in that division
 
     // ─── League season ────────────────────────────────────────────────────
     static League currentLeague;
 
     // ─── Season / game state ─────────────────────────────────────────────────
     static Manager manager;
-    static int myTeam;          // team index (1-based in teams[])
+    static Team myTeam;         // the team being managed
     static int division;        // 1-4
-    static int divOffset;       // (division-1)*16
     static int divMult;         // 5-division (money multiplier)
     static int skillLevel;      // 1-7
     static final String[] levelName   = {"", "Beginner", "Novice", "Average", "Good", "Expert", "Super Expert", "Genius"};
@@ -111,7 +111,7 @@ public class FootballManager implements CommandLineRunner {
             String cmd = Utils.inputLine("Enter command: ", 0).toUpperCase();
 
             switch (cmd) {
-                case "A"      -> TransferMarket.sellOrListPlayers(myTeam);
+                case "A"      -> TransferMarket.sellOrListPlayers();
                 case "S"      -> printStats();
                 case "L"      -> Finance.obtainLoan(divMult);
                 case "P"      -> Finance.payOffLoan();
@@ -126,9 +126,9 @@ public class FootballManager implements CommandLineRunner {
     // ─── Print stats (subroutine 3000) ────────────────────────────────────
     private void printStats() {
         Utils.cls();
-        System.out.println("Team    : " + team(myTeam).getName());
+        System.out.println("Team    : " + myTeam.getName());
         System.out.println("Manager : " + manager.getName());
-        System.out.println("Colours : " + (team(myTeam).getColor() == TeamColor.BLACK ? "Black" : "White"));
+        System.out.println("Colours : " + (myTeam.getColor() == TeamColor.BLACK ? "Black" : "White"));
         System.out.println("Level   : " + manager.getSkillLevel() + " - " + levelName[manager.getSkillLevel()]);
         System.out.println("Seasons : " + SeasonEngine.seasons);
         System.out.println("Division: " + division);
@@ -147,7 +147,7 @@ public class FootballManager implements CommandLineRunner {
         int n = Utils.inputInt("Enter level (1-7): ");
         if (n < 1 || n > 7) { System.out.println("1 to 7 please!"); Utils.pause(1000); return; }
         skillLevel = n;
-        manager = new Manager(manager.getName(), team(myTeam), skillLevel);
+        manager = new Manager(manager.getName(), myTeam, skillLevel);
         System.out.println("New skill level: " + skillLevel + " - " + levelName[skillLevel]);
         Utils.waitEnter();
     }
@@ -204,15 +204,18 @@ public class FootballManager implements CommandLineRunner {
         String ans = Utils.inputLine("Change team names? (y/n): ", 0).toUpperCase();
         if (!ans.equals("Y") && !ans.equals("YES")) return;
         while (true) {
-            int n = Utils.inputInt("Team number to rename (1-64, 99 to stop): ");
-            if (n == 99) break;
-            if (n < 1 || n > MAX_TEAMS) continue;
-            System.out.println("Current name: " + team(n).getName());
+            int d = Utils.inputInt("Division of team to rename (99 to stop): ");
+            if (d == 99) break;
+            List<Team> divisionTeams = teams.get(d);
+            if (divisionTeams == null) continue;
+            int id = Utils.inputInt("Team number within division: ");
+            Team target = divisionTeams.stream().filter(team -> team.getId() == id).findFirst().orElse(null);
+            if (target == null) continue;
+            System.out.println("Current name: " + target.getName());
             String name = Utils.inputLine("New name (max 10 chars): ", 10);
-            if (!name.isEmpty()) team(n).setName(name);
+            if (!name.isEmpty()) target.setName(name);
         }
     }
-
     private static void changePlayerNames() {
         String ans = Utils.inputLine("Change player names? (y/n): ", 0).toUpperCase();
         if (!ans.equals("Y") && !ans.equals("YES")) return;
@@ -230,8 +233,15 @@ public class FootballManager implements CommandLineRunner {
         return players[number];
     }
 
-    static Team team(int number) {
-        return teams[number];
+    static List<Team> allTeams() {
+        List<Team> all = new ArrayList<>();
+        teams.values().forEach(all::addAll);
+        return all;
+    }
+
+    static Team randomTeam() {
+        List<Team> all = allTeams();
+        return all.get(r(all.size()) - 1);
     }
 
     static int statusCode(int playerNumber) {
@@ -252,13 +262,13 @@ public class FootballManager implements CommandLineRunner {
             default -> throw new IllegalArgumentException("Unknown player status: " + status);
         };
         player(playerNumber).setStatus(playerStatus);
-        if (playerStatus == PlayerStatus.NOT_IN_SQUAD && myTeam > 0) {
-            boolean result = team(myTeam).removePlayer(player(playerNumber));
+        if (playerStatus == PlayerStatus.NOT_IN_SQUAD && myTeam != null) {
+            myTeam.removePlayer(player(playerNumber));
         }
     }
 
     static int teamAttribute(int attribute) {
-        TeamAttributes attributes = team(myTeam).getAttributes();
+        TeamAttributes attributes = myTeam.getAttributes();
         return switch (attribute) {
             case 1 -> attributes.energy();
             case 2 -> attributes.morale();
@@ -274,17 +284,17 @@ public class FootballManager implements CommandLineRunner {
             throw new IllegalArgumentException("Unknown team attribute: " + attribute);
         }
         value = Math.clamp(value, 1, 20);
-        TeamAttributes attributes = team(myTeam).getAttributes();
+        TeamAttributes attributes = myTeam.getAttributes();
         int energy = attribute == 1 ? value : attributes.energy();
         int morale = attribute == 2 ? value : attributes.morale();
         int defence = attribute == 3 ? value : attributes.defence();
         int midfield = attribute == 4 ? value : attributes.midfield();
         int attack = attribute == 5 ? value : attributes.attack();
-        team(myTeam).setAttributes(new TeamAttributes(energy, morale, defence, midfield, attack));
+        myTeam.setAttributes(new TeamAttributes(energy, morale, defence, midfield, attack));
     }
 
-    static LeagueStanding standing(int localTeamNumber) {
-        return currentLeague.getStanding(team(divOffset + localTeamNumber));
+    static LeagueStanding standing(Team team) {
+        return currentLeague.getStanding(team);
     }
 }
 

@@ -1,21 +1,20 @@
 package org.sclerck.ktfm;
 
 import org.sclerck.ktfm.model.League;
+import java.util.List;
 import org.sclerck.ktfm.model.Team;
 
-import static org.sclerck.ktfm.FootballManager.DIV_SIZE;
 import static org.sclerck.ktfm.FootballManager.MAX_PLAYERS;
 import static org.sclerck.ktfm.FootballManager.clampMorale;
 import static org.sclerck.ktfm.FootballManager.currentLeague;
 import static org.sclerck.ktfm.FootballManager.divMult;
-import static org.sclerck.ktfm.FootballManager.divOffset;
 import static org.sclerck.ktfm.FootballManager.division;
 import static org.sclerck.ktfm.FootballManager.myTeam;
 import static org.sclerck.ktfm.FootballManager.player;
 import static org.sclerck.ktfm.FootballManager.r;
 import static org.sclerck.ktfm.FootballManager.setTeamAttribute;
 import static org.sclerck.ktfm.FootballManager.standing;
-import static org.sclerck.ktfm.FootballManager.team;
+import static org.sclerck.ktfm.FootballManager.teams;
 import static org.sclerck.ktfm.Utils.cls;
 import static org.sclerck.ktfm.Utils.waitEnter;
 
@@ -36,24 +35,22 @@ final class SeasonEngine {
         MatchEngine.printLeagueTable();
 
         // Bonus for performance
-        int pos = currentLeague.getTable().indexOf(standing(myTeam - divOffset)) + 1;
+        int pos = currentLeague.getTable().indexOf(standing(myTeam)) + 1;
         Finance.awardSeasonBonus(pos);
 
         // Promotion / relegation
         if (pos <= 3 && division > 1) {
-            System.out.println("🎉 " + team(myTeam).getName() + " are PROMOTED!");
+            System.out.println("🎉 " + myTeam.getName() + " are PROMOTED!");
             FootballManager.division--;
             moveManagedTeamToDivision();
-            FootballManager.divOffset = (division - 1) * DIV_SIZE;
             FootballManager.divMult = 5 - division;
-        } else if (pos >= 14 && division < 4) {
-            System.out.println("😞 " + team(myTeam).getName() + " are RELEGATED!");
+        } else if (pos > currentLeague.getTeams().size() - 3 && division < 4) {
+            System.out.println("😞 " + myTeam.getName() + " are RELEGATED!");
             FootballManager.division++;
             moveManagedTeamToDivision();
-            FootballManager.divOffset = (division - 1) * DIV_SIZE;
             FootballManager.divMult = 5 - division;
         } else if (pos == 1) {
-            System.out.println("🏆 " + team(myTeam).getName() + " are League Champions!");
+            System.out.println("🏆 " + myTeam.getName() + " are League Champions!");
         }
 
         seasons++;
@@ -63,12 +60,9 @@ final class SeasonEngine {
 
     // ─── Reset season variables (subroutine 8800) ─────────────────────────
     static void startSeason() {
-        FootballManager.divOffset = (division - 1) * DIV_SIZE;
         FootballManager.divMult = 5 - division;
         FootballManager.currentLeague = new League(division);
-        for (int localTeam = 1; localTeam <= DIV_SIZE; localTeam++) {
-            currentLeague.addTeam(team(divOffset + localTeam));
-        }
+        teams.get(division).forEach(currentLeague::addTeam);
         MatchEngine.startSeason();
 
         for (int i = 1; i <= MAX_PLAYERS; i++) {
@@ -83,17 +77,16 @@ final class SeasonEngine {
         Finance.startSeason();
     }
 
+    /** Moves the managed team to its new division, swapping places with the last team there. */
     private static void moveManagedTeamToDivision() {
-        Team managedTeam = team(myTeam);
-        int previousDivision = managedTeam.getDivision();
-        int newIndex = (division - 1) * DIV_SIZE + DIV_SIZE;
-        if (myTeam != newIndex) {
-            Team displacedTeam = team(newIndex);
-            FootballManager.teams[newIndex] = managedTeam;
-            FootballManager.teams[myTeam] = displacedTeam;
-            displacedTeam.setDivision(previousDivision);
-            FootballManager.myTeam = newIndex;
-        }
-        managedTeam.setDivision(division);
+        int previousDivision = myTeam.getDivision();
+        List<Team> oldLeague = teams.get(previousDivision);
+        List<Team> newLeague = teams.get(division);
+        Team displacedTeam = newLeague.removeLast();
+        oldLeague.remove(myTeam);
+        newLeague.add(myTeam);
+        oldLeague.add(displacedTeam);
+        displacedTeam.setDivision(previousDivision);
+        myTeam.setDivision(division);
     }
 }

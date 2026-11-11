@@ -6,24 +6,23 @@ import java.util.Set;
 import org.sclerck.ktfm.model.Competition;
 import org.sclerck.ktfm.model.LeagueStanding;
 import org.sclerck.ktfm.model.Match;
+import org.sclerck.ktfm.model.Team;
 import org.sclerck.ktfm.model.TeamAttributes;
 
 import static org.sclerck.ktfm.Finance.adjustFinances;
 import static org.sclerck.ktfm.Finance.printMoney;
-import static org.sclerck.ktfm.FootballManager.DIV_SIZE;
 
 import static org.sclerck.ktfm.FootballManager.MAX_PLAYERS;
-import static org.sclerck.ktfm.FootballManager.MAX_TEAMS;
 import static org.sclerck.ktfm.FootballManager.RND;
 import static org.sclerck.ktfm.FootballManager.clampMorale;
 import static org.sclerck.ktfm.FootballManager.currentLeague;
 import static org.sclerck.ktfm.FootballManager.divMult;
-import static org.sclerck.ktfm.FootballManager.divOffset;
 import static org.sclerck.ktfm.FootballManager.division;
 import static org.sclerck.ktfm.FootballManager.manager;
 import static org.sclerck.ktfm.FootballManager.myTeam;
 import static org.sclerck.ktfm.FootballManager.player;
 import static org.sclerck.ktfm.FootballManager.printSquad;
+import static org.sclerck.ktfm.FootballManager.randomTeam;
 import static org.sclerck.ktfm.FootballManager.printSquadHeader;
 import static org.sclerck.ktfm.FootballManager.r;
 import static org.sclerck.ktfm.FootballManager.setPlayerStatus;
@@ -31,8 +30,8 @@ import static org.sclerck.ktfm.FootballManager.setTeamAttribute;
 import static org.sclerck.ktfm.FootballManager.skillLevel;
 import static org.sclerck.ktfm.FootballManager.standing;
 import static org.sclerck.ktfm.FootballManager.statusCode;
-import static org.sclerck.ktfm.FootballManager.team;
 import static org.sclerck.ktfm.FootballManager.teamAttribute;
+import static org.sclerck.ktfm.FootballManager.teams;
 import static org.sclerck.ktfm.Utils.cls;
 import static org.sclerck.ktfm.Utils.inputInt;
 import static org.sclerck.ktfm.Utils.pause;
@@ -51,8 +50,8 @@ final class MatchEngine {
 
     // ─── Current match state ─────────────────────────────────────────────────
     private static int score1, score2;            // home, away scores
-    private static int matchTeam1, matchTeam2;    // team indices
-    private static int opp;                       // opponent team index
+    private static Team matchTeam1, matchTeam2;   // home, away
+    private static Team opp;                      // opponent
     private static TeamAttributes oppositionAttributes = new TeamAttributes(1, 1, 1, 1, 1);
     private static Match currentMatch;
     private static final String[] attrName = {"", "Energy", "Morale", "Defence", "Midfield", "Attack"};
@@ -80,15 +79,15 @@ final class MatchEngine {
         if (leagueGame == 1) {
             // FA Cup
             cupRound++;
-            opp = r(MAX_TEAMS);
-            while (opp == myTeam) opp = r(MAX_TEAMS);
+            opp = randomTeam();
+            while (opp == myTeam) opp = randomTeam();
         } else {
             // League
             leagueMatch++;
-            int oppLocal = leagueMatch + divOffset;
-            if (oppLocal > divOffset + DIV_SIZE) oppLocal = divOffset + 1;
-            opp = oppLocal;
-            if (opp == myTeam) { opp++; if (opp > divOffset + DIV_SIZE) opp = divOffset + 1; }
+            List<Team> league = teams.get(division);
+            int index = (leagueMatch - 1) % league.size();
+            opp = league.get(index);
+            if (opp == myTeam) opp = league.get((index + 1) % league.size());
         }
 
         buildOppositionAttributes();
@@ -106,7 +105,7 @@ final class MatchEngine {
         } else {
             System.out.println("  LEAGUE MATCH No." + leagueMatch + "  |  Division " + division);
         }
-        System.out.println("  " + team(matchTeam1).getName() + "  v  " + team(matchTeam2).getName());
+        System.out.println("  " + matchTeam1.getName() + "  v  " + matchTeam2.getName());
         System.out.println("──────────────────────────────────────");
         printAttributeComparison();
         waitEnter();
@@ -162,9 +161,9 @@ final class MatchEngine {
         for (int i = 1; i <= 5; i++) {
             int val;
             if (leagueGame == 1) {
-                val = r(16) + skillLevel + ((myTeam - 1) / DIV_SIZE) - ((opp - 1) / DIV_SIZE + 1);
+                val = r(16) + skillLevel + (myTeam.getDivision() - 1) - opp.getDivision();
             } else {
-                double zAvg = (leagueMatch > 0) ? (double) standing(opp - divOffset).getPoints() / leagueMatch : 0;
+                double zAvg = (leagueMatch > 0) ? (double) standing(opp).getPoints() / leagueMatch : 0;
                 val = r(14) + skillLevel + (int) zAvg;
             }
             val = Math.clamp(val, 1, 20);
@@ -193,14 +192,14 @@ final class MatchEngine {
         for (int i = 3; i <= 5; i++) {
             attributes[i] = Math.clamp(attributes[i], 1, 20);
         }
-        team(myTeam).setAttributes(new TeamAttributes(
+        myTeam.setAttributes(new TeamAttributes(
                 Math.clamp(attributes[1], 1, 20), teamAttribute(2),
                 attributes[3], attributes[4], attributes[5]));
     }
 
     // ─── Print attribute comparison ────────────────────────────────────────
     private static void printAttributeComparison() {
-        System.out.printf("%-15s %5s %5s%n", "Attribute", team(myTeam).getName().substring(0, Math.min(5, team(myTeam).getName().length())), team(opp).getName().substring(0, Math.min(5, team(opp).getName().length())));
+        System.out.printf("%-15s %5s %5s%n", "Attribute", myTeam.getName().substring(0, Math.min(5, myTeam.getName().length())), opp.getName().substring(0, Math.min(5, opp.getName().length())));
         for (int i = 1; i <= 5; i++) {
             System.out.printf("%-15s %5d %5d%n", attrName[i], teamAttribute(i), oppositionAttribute(i));
         }
@@ -264,7 +263,7 @@ final class MatchEngine {
     }
 
     private static int countPicked() {
-        return team(myTeam).getStartingPlayers().size();
+        return myTeam.getStartingPlayers().size();
     }
 
     // =========================================================================
@@ -274,7 +273,7 @@ final class MatchEngine {
         score1 = 0; score2 = 0;
         cls();
         System.out.println("★★  MATCH HIGHLIGHTS  ★★");
-        System.out.println(team(matchTeam1).getName() + "  v  " + team(matchTeam2).getName());
+        System.out.println(matchTeam1.getName() + "  v  " + matchTeam2.getName());
         System.out.println();
 
         boolean myHome = (matchTeam1 == myTeam);
@@ -301,9 +300,9 @@ final class MatchEngine {
         System.out.println();
         System.out.println("──────────────────────────────────");
         System.out.println("  ★★  FINAL SCORE  ★★");
-        System.out.printf("  %-20s %2d%n", team(matchTeam1).getName(), score1);
-        System.out.printf("  %-20s %2d%n", team(matchTeam2).getName(), score2);
-        currentMatch = Match.simulated(team(matchTeam1), team(matchTeam2),
+        System.out.printf("  %-20s %2d%n", matchTeam1.getName(), score1);
+        System.out.printf("  %-20s %2d%n", matchTeam2.getName(), score2);
+        currentMatch = Match.simulated(matchTeam1, matchTeam2,
                 leagueGame == 1 ? Competition.FA_CUP : Competition.LEAGUE,
                 leagueGame == 1 ? cupRound : leagueMatch, score1, score2);
         System.out.println("──────────────────────────────────");
@@ -316,7 +315,7 @@ final class MatchEngine {
         if (isGoal) {
             if (myHome == myTeamAttacking) { score1++; } else { score2++; }
             System.out.println("  ⚽ GOAL!  " + attacker + " scores!");
-            System.out.printf("     [%s %d - %d %s]%n", team(matchTeam1).getName(), score1, score2, team(matchTeam2).getName());
+            System.out.printf("     [%s %d - %d %s]%n", matchTeam1.getName(), score1, score2, matchTeam2.getName());
         } else {
             System.out.println("  → " + attacker + " drives forward... NO GOAL!");
         }
@@ -344,24 +343,25 @@ final class MatchEngine {
         cls();
         System.out.println("OTHER RESULTS - Division " + division);
         System.out.println("──────────────────────────────────");
-        Set<Integer> done = new HashSet<>();
-        done.add(myTeam - divOffset);
-        done.add(opp    - divOffset);
-        int games = 0;
-        while (games < 7) {
-            int a = r(DIV_SIZE), b = r(DIV_SIZE);
+        List<Team> league = currentLeague.getTeams();
+        Set<Team> done = new HashSet<>();
+        done.add(myTeam);
+        done.add(opp);
+        int games = (league.size() - 2) / 2;
+        int played = 0;
+        while (played < games) {
+            Team a = league.get(r(league.size()) - 1);
+            Team b = league.get(r(league.size()) - 1);
             if (a == b || done.contains(a) || done.contains(b)) continue;
             done.add(a); done.add(b);
             int ga = (int) (standing(a).getPoints() / Math.max(1, leagueMatch) + RND.nextDouble() * 4);
             int gb = (int) (standing(b).getPoints() / Math.max(1, leagueMatch) + RND.nextDouble() * 4);
-            System.out.printf("  %-18s %d  -  %d  %-18s%n",
-                    team(divOffset + a).getName(), ga, gb, team(divOffset + b).getName());
-            currentLeague.recordResult(team(divOffset + a), team(divOffset + b), ga, gb);
-            games++;
+            System.out.printf("  %-18s %d  -  %d  %-18s%n", a.getName(), ga, gb, b.getName());
+            currentLeague.recordResult(a, b, ga, gb);
+            played++;
         }
         waitEnter();
     }
-
     // ─── Print league table (subroutine 7710 / 7805) ─────────────────────
     static void printLeagueTable() {
         List<LeagueStanding> table = currentLeague.getTable();
@@ -369,9 +369,9 @@ final class MatchEngine {
         System.out.println("══════════════════════════════════════════════════");
         System.out.printf("  %-22s %4s %4s %4s%n", "TEAM", "F", "A", "PTS");
         System.out.println("──────────────────────────────────────────────────");
-        for (int rank = 0; rank < DIV_SIZE; rank++) {
+        for (int rank = 0; rank < table.size(); rank++) {
             LeagueStanding standing = table.get(rank);
-            String marker = (standing.getTeam() == team(myTeam)) ? " ◄" : "";
+            String marker = (standing.getTeam() == myTeam) ? " ◄" : "";
             System.out.printf("  %-22s %4d %4d %4d%s%n",
                     standing.getTeam().getName(), standing.getGoalsFor(), standing.getGoalsAgainst(),
                     standing.getPoints(), marker);
@@ -424,8 +424,8 @@ final class MatchEngine {
     }
 
     // ─── Prize money ──────────────────────────────────────────────────────
-    private static int matchPrize(boolean cupMatch, int cupRound, int opponentTeam, boolean homeGame) {
-        int opponentDivision = (opponentTeam - 1) / DIV_SIZE + 1;
+    private static int matchPrize(boolean cupMatch, int cupRound, Team opponentTeam, boolean homeGame) {
+        int opponentDivision = opponentTeam.getDivision();
         if (cupMatch) {
             if (cupRound == 7) return 50000;
             if (cupRound == 8) return 100000;

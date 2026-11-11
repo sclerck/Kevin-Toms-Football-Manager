@@ -9,7 +9,10 @@ import static org.sclerck.ktfm.Utils.requireLabel;
 public final class Team {
     public static final int MAX_SQUAD_SIZE = 16;
 
+    private final int id;
     private String name;
+    private final String abbreviation;
+    private final String stadium;
     private int division;
     private final List<Player> players = new ArrayList<>();
     private TeamAttributes attributes = new TeamAttributes(1, 10, 1, 1, 1);
@@ -18,6 +21,13 @@ public final class Team {
     private int loan;
 
     public Team(String name, int division) {
+        this(0, name, null, null, division);
+    }
+
+    public Team(int id, String name, String abbreviation, String stadium, int division) {
+        this.id = id;
+        this.abbreviation = abbreviation;
+        this.stadium = stadium;
         setName(name);
         if (division < 1 || division > 4) {
             throw new IllegalArgumentException("Division must be between 1 and 4");
@@ -25,7 +35,11 @@ public final class Team {
         this.division = division;
     }
 
+    /** Identifier of the team within its division, as listed in the source data. */
+    public int getId() { return id; }
     public String getName() { return name; }
+    public String getAbbreviation() { return abbreviation; }
+    public String getStadium() { return stadium; }
     public int getDivision() { return division; }
     public List<Player> getPlayers() { return List.copyOf(players); }
     public List<Player> getStartingPlayers() {

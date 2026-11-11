@@ -10,8 +10,6 @@ import java.util.Objects;
 import java.util.Set;
 
 public final class League {
-    public static final int TEAMS_PER_DIVISION = 16;
-
     private final int division;
     private final Map<Team, LeagueStanding> standings = new LinkedHashMap<>();
     private final Set<Match> recordedMatches = new HashSet<>();
@@ -44,9 +42,6 @@ public final class League {
         }
         if (standings.containsKey(team)) {
             throw new IllegalArgumentException("Team is already in this league");
-        }
-        if (standings.size() >= TEAMS_PER_DIVISION) {
-            throw new IllegalStateException("A division cannot contain more than 16 teams");
         }
         standings.put(team, new LeagueStanding(team));
     }

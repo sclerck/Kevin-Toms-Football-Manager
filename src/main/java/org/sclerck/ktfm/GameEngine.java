@@ -1,14 +1,24 @@
 package org.sclerck.ktfm;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import org.sclerck.ktfm.model.Manager;
 import org.sclerck.ktfm.model.Player;
 import org.sclerck.ktfm.model.PlayerStatus;
 import org.sclerck.ktfm.model.Team;
 import org.sclerck.ktfm.model.TeamColor;
 
-import static org.sclerck.ktfm.FootballManager.DIV_SIZE;
 import static org.sclerck.ktfm.FootballManager.MAX_PLAYERS;
-import static org.sclerck.ktfm.FootballManager.MAX_TEAMS;
 import static org.sclerck.ktfm.FootballManager.levelName;
 import static org.sclerck.ktfm.FootballManager.r;
 import static org.sclerck.ktfm.Utils.cls;
@@ -20,7 +30,14 @@ import static org.sclerck.ktfm.Utils.pause;
 final class GameEngine {
 
     /** Everything the game needs once setup is complete. Arrays are 1-based. */
-    record Result(Player[] players, Team[] teams, Manager manager, int myTeam, int division) { }
+    record Result(Player[] players, Map<Integer, List<Team>> teams, Manager manager, Team myTeam, int division) { }
+
+    /** A team entry in efl.json. */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record EflTeam(@JsonProperty("team_id") int id,
+                   @JsonProperty("team_name") String name,
+                   @JsonProperty("team_abbreviation") String abbreviation,
+                   @JsonProperty("team_stadium") String stadium) { }
 
     private GameEngine() { }
 
@@ -29,13 +46,11 @@ final class GameEngine {
         String managerName = askManagerName();
 
         Player[] players = new Player[MAX_PLAYERS + 1];
-        Team[] teams = new Team[MAX_TEAMS + 1];
-        loadData(players, teams);
+        loadPlayers(players);
+        Map<Integer, List<Team>> teams = loadTeams();
 
-        int[] choice = chooseTeam(teams);
-        int myTeam = choice[0];
-        int division = choice[1];
-        Team team = teams[myTeam];
+        Team team = chooseTeam(teams);
+        int division = team.getDivision();
 
         int skillLevel = chooseSkillLevel();
         team.setColor(chooseColour());
@@ -45,7 +60,7 @@ final class GameEngine {
         System.out.println("You are now managing " + team.getName() + "!");
         pause(1500);
 
-        return new Result(players, teams, new Manager(managerName, team, skillLevel), myTeam, division);
+        return new Result(players, teams, new Manager(managerName, team, skillLevel), team, division);
     }
 
     private static void showTitle() {
@@ -67,7 +82,7 @@ final class GameEngine {
     }
 
     // ─── Data loading (subroutine 9000) ───────────────────────────────────
-    private static void loadData(Player[] players, Team[] teams) {
+    private static void loadPlayers(Player[] players) {
         // Player names (line 9030)
         String[] names = {
                 "P.Parkes","D.Watson","P.Neal","A.Martin","K.Sansom","M.Mills",
@@ -75,30 +90,6 @@ final class GameEngine {
                 "G.Owen","R.Moses","B.Talbot","S.McCall","C.Regis","P.Withe",
                 "T.Morley","P.Barnes","E.Gates","K.Reeves","K.Keegan","G.Shaw"
         };
-        // Team names - all 4 divisions (line 9230)
-        String[] teamNames = {
-                // Division 1
-                "Arsenal","Aston V.","Brighton","Coventry","Everton","Ipswich",
-                "Liverpool","Luton","Man.City","Man.Utd","Norwich","Notts.F.",
-                "Swansea","Spurs","Watford","West Ham",
-                // Division 2
-                "Blackburn","Bolton","Cambridge","Charlton","Chelsea","Crystal P.",
-                "Derby Co.","Fulham","Grimsby","Leeds","Middlesbro","Newcastle",
-                "Oldham","Q.P.R.","Rotherham","Sheff.Wed",
-                // Division 3
-                "Bradford","Brentford","Bristol R.","Cardiff","Doncaster","Exeter",
-                "Lincoln","Millwall","Newport","Orient","Oxford","Plymouth",
-                "Preston","Reading","Southend","Walsall",
-                // Division 4
-                "Blackpool","Bury","Colchester","Crewe","Darlington","Halifax",
-                "Hartlepool","Hereford","Hull","Mansfield","Port Vale","Rochdale",
-                "Scunthorpe","Stockport","Torquay","York City"
-        };
-        // Create the domain objects for all clubs and players.
-        for (int i = 1; i <= MAX_TEAMS; i++) {
-            teams[i] = new Team(teamNames[i - 1], (i - 1) / DIV_SIZE + 1);
-        }
-
         // Random initial player skills / energies
         for (int i = 1; i <= MAX_PLAYERS; i++) {
             int skill = r(10);
@@ -107,32 +98,67 @@ final class GameEngine {
         }
     }
 
-    // ─── Choose team (subroutine 8900); returns {team number, division} ───
-    private static int[] chooseTeam(Team[] teams) {
+    /**
+     * Reads efl.json into a map of division ID to the teams in that division.
+     * The file repeats the "division" and "teams" keys once per division inside a single
+     * object, so it is read token by token rather than bound to a single tree.
+     */
+    private static Map<Integer, List<Team>> loadTeams() {
+        ObjectMapper mapper = new ObjectMapper();
+        Map<Integer, List<Team>> teams = new TreeMap<>();
+        try (InputStream in = GameEngine.class.getResourceAsStream("/efl.json")) {
+            if (in == null) throw new IllegalStateException("efl.json not found on the classpath");
+            JsonParser parser = mapper.createParser(in);
+            if (parser.nextToken() != JsonToken.START_OBJECT) {
+                throw new IllegalStateException("efl.json must contain a JSON object");
+            }
+            int division = 0;
+            while (parser.nextToken() == JsonToken.FIELD_NAME) {
+                String field = parser.currentName();
+                parser.nextToken();
+                if (field.equals("division")) {
+                    division = parser.getIntValue();
+                } else if (field.equals("teams")) {
+                    if (division == 0) throw new IllegalStateException("efl.json: teams listed before a division");
+                    List<Team> divisionTeams = teams.computeIfAbsent(division, k -> new ArrayList<>());
+                    while (parser.nextToken() == JsonToken.START_OBJECT) {
+                        EflTeam t = mapper.readValue(parser, EflTeam.class);
+                        divisionTeams.add(new Team(t.id(), t.name(), t.abbreviation(), t.stadium(), division));
+                    }
+                } else {
+                    parser.skipChildren();
+                }
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException("Unable to read efl.json", e);
+        }
+        return teams;
+    }
+
+    // ─── Choose team (subroutine 8900) ────────────────────────────────────
+    private static Team chooseTeam(Map<Integer, List<Team>> teams) {
         while (true) {
             cls();
             int d = 0;
-            while (d < 1 || d > 4) {
-                System.out.println("Choose a division to browse (1-4): ");
-                for (int div = 1; div <= 4; div++) {
-                    System.out.println("  Division " + div + ":");
-                    int off = (div - 1) * DIV_SIZE;
-                    for (int i = off + 1; i <= off + DIV_SIZE; i++)
-                        System.out.printf("    %2d. %s%n", i, teams[i].getName());
-                }
+            while (!teams.containsKey(d)) {
+                System.out.println("Choose a division to browse " + teams.keySet() + ": ");
+                teams.forEach((division, divisionTeams) -> {
+                    System.out.println("  Division " + division + ":");
+                    for (Team team : divisionTeams)
+                        System.out.printf("    %2d. %s%n", team.getId(), team.getName());
+                });
                 d = inputInt("Division: ");
             }
-            int offset = (d - 1) * DIV_SIZE;
-            int t = 0;
-            while (t < offset + 1 || t > offset + DIV_SIZE) {
-                t = inputInt("Type team number (or 99 for another division): ");
-                if (t == 99) break;
+            List<Team> divisionTeams = teams.get(d);
+            while (true) {
+                int id = inputInt("Type team number (or 99 for another division): ");
+                if (id == 99) break;
+                for (Team team : divisionTeams) {
+                    if (team.getId() == id) return team;
+                }
             }
-            if (t == 99) continue;
-            return new int[] {t, d};
         }
     }
-
     private static int chooseSkillLevel() {
         cls();
         System.out.println("Choose your skill level:");
